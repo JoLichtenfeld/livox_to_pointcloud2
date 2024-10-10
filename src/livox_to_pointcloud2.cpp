@@ -4,13 +4,39 @@ using namespace std::chrono_literals;
 
 LivoxToPointCloud2::LivoxToPointCloud2() : Node("livox_to_pointcloud2")
 {
-    publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("converted_pointcloud2", 10);
+    std::string custom_type = "livox_ros_driver2/msg/CustomMsg";
+    std::string sub_topic;
+    std::string pub_topic;
+
+    while (rclcpp::ok() && sub_topic.empty())
+    {
+        auto topics_and_types = this->get_topic_names_and_types();
+        for (const auto& topic_and_type : topics_and_types)
+        {
+            const std::string topic_name = topic_and_type.first;
+            const std::vector<std::string> types = topic_and_type.second;
+            if (std::find(types.begin(), types.end(), custom_type) != types.end())
+            {
+                sub_topic = topic_name;
+                pub_topic = topic_name + "_pc2";
+                RCLCPP_INFO(this->get_logger(), "Subscribing to topic: %s", topic_name.c_str());
+                RCLCPP_INFO(this->get_logger(), "Publishing to topic: %s", pub_topic.c_str());
+                break;
+            }
+        }
+        RCLCPP_INFO(this->get_logger(), "No topic found, sleeping 1 sec");
+        rclcpp::sleep_for(1000ms);
+    }
+
+    publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pub_topic, 10);
     subscription_ = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(
-        "livox_pointcloud", 10, std::bind(&LivoxToPointCloud2::callback, this, std::placeholders::_1));
+        sub_topic, 10, std::bind(&LivoxToPointCloud2::callback, this, std::placeholders::_1));
+    RCLCPP_INFO(this->get_logger(), "LivoxToPointCloud2 node has been started");
 }
 
 void LivoxToPointCloud2::callback(const livox_ros_driver2::msg::CustomMsg::SharedPtr msg)
 {
+    RCLCPP_INFO_ONCE(this->get_logger(), "First msg received");
     sensor_msgs::msg::PointCloud2 output;
     output.header = msg->header;
     output.fields.resize(6);

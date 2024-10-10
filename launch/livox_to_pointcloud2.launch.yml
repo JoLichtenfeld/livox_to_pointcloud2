@@ -6,7 +6,7 @@ launch:
       remap:
       -
           from: "/livox_pointcloud"
-          to: "/livox/lidar"
+          to: "/livox/points"
       -
           from: "/converted_pointcloud2"
-          to: "/livox/lidar/pcd2"
+          to: "/livox/points/pcd2"
